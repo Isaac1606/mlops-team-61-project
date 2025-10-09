@@ -1,0 +1,9 @@
+numpy
+pandas
+scikit-learn
+mlflow
+dvc
+dvc_s3  
+awscli
+aiobotocore 
+botocore

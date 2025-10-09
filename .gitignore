@@ -94,11 +94,18 @@ target/
 # exclude compiled binaries
 bin/
 
-# exclude data from source control by default
+# exclude data from source control by default except for DVC files
 /data/external
+!/data/external/*.dvc
 /data/interim
+!/data/interim/*.dvc
 /data/processed
+!/data/processed/*.dvc
 /data/raw
+!/data/raw/*.dvc
 
 # exclude external models from source control
 /src/external/
+
+# virtual environment
+/venv

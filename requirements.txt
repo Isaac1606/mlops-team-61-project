@@ -7,3 +7,5 @@ dvc_s3
 awscli
 aiobotocore 
 botocore
+ipykernel
+seaborn

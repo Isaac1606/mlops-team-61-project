@@ -1,0 +1,5 @@
+outs:
+- md5: cd443d585c49b959436549960b8e069e
+  size: 1097425
+  hash: md5
+  path: bike_sharing_features_validation_normalized.csv

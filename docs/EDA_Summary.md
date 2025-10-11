@@ -259,3 +259,4 @@ Según ML Canvas, implementar en orden:
 **Autor:** MLOps Team 61  
 **Última actualización:** Octubre 2025
 
+

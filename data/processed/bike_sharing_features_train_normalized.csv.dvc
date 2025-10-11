@@ -1,0 +1,5 @@
+outs:
+- md5: 4d8d825424201fb12f335dd3c43ecc69
+  size: 5374543
+  hash: md5
+  path: bike_sharing_features_train_normalized.csv

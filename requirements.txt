@@ -1,11 +1,50 @@
+# ============================================================================
+# REQUIREMENTS - MLOps Bike Sharing Demand Prediction
+# ============================================================================
+# Actualizado: 2025-10-12
+# Compatible con Python 3.9+
+
+# Core Data Science
 numpy
 pandas
+scipy
+
+# Machine Learning
 scikit-learn
-mlflow
-dvc
-dvc_s3  
-awscli
-aiobotocore 
-botocore
-ipykernel
+xgboost
+
+# Statistical Analysis (NUEVAS - para pruebas estadísticas formales)
+statsmodels  # ACF, PACF, ADF, KPSS, Ljung-Box
+
+# Visualization
+matplotlib
 seaborn
+
+# MLflow & Experiment Tracking
+mlflow
+
+# Data Versioning (DVC)
+dvc
+dvc-s3
+
+# AWS Integration
+awscli
+aiobotocore
+botocore
+
+# Jupyter & Notebooks
+ipykernel
+ipython
+jupyter
+
+# Utils
+joblib  # Para guardar scaler y modelos
+python-dateutil
+pytz
+
+# Optional: Advanced Features (descomentar si necesitas)
+# shap  # Para explicabilidad (SHAP values)
+# optuna  # Para hyperparameter tuning bayesiano
+# evidently  # Para monitoreo de drift
+# fastapi  # Para API de producción
+# uvicorn  # Server ASGI para FastAPI

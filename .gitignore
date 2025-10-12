@@ -20,6 +20,16 @@ __pycache__/
 *.out
 *.app
 
+
+# MLflow tracking and models (too large for Git)
+mlruns/
+
+# Exclude model files (tracked with DVC)
+/models/*
+!/models/
+!/models/*.dvc
+!/models/*.csv
+
 # Distribution / packaging
 .Python
 env/

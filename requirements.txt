@@ -9,3 +9,6 @@ aiobotocore
 botocore
 ipykernel
 seaborn
+xgboost
+matplotlib
+joblib

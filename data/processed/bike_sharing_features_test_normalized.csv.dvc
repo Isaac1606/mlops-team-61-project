@@ -1,5 +1,5 @@
 outs:
-- md5: 35707e490f9849eb7a6e1e586cb2cf93
-  size: 6608502
+- md5: b521ee8968170a852ce0975e5fe554e4
+  size: 1297963
   hash: md5
   path: bike_sharing_features_test_normalized.csv

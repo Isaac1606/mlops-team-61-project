@@ -342,6 +342,7 @@ make mlflow-ui
 
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Detailed architecture documentation
 - **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** - Reproducibility guide
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Troubleshooting common issues
 - **[docs/ML_Canvas.md](docs/ML_Canvas.md)** - Business requirements
 - **[docs/EDA_Summary.md](docs/EDA_Summary.md)** - EDA findings
 

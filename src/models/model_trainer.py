@@ -7,18 +7,31 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
-from xgboost import XGBRegressor
 from typing import Dict, Any, Optional, Union
 import mlflow
 import mlflow.sklearn
-import mlflow.xgboost
 import joblib
 import logging
 
+# Setup logger first
+logger = logging.getLogger(__name__)
+
+# Optional XGBoost import (handles missing OpenMP runtime gracefully)
+try:
+    from xgboost import XGBRegressor
+    import mlflow.xgboost
+    XGBOOST_AVAILABLE = True
+except (ImportError, OSError) as e:
+    XGBOOST_AVAILABLE = False
+    XGBRegressor = None
+    logger.warning(
+        f"XGBoost not available: {e}\n"
+        "To install OpenMP runtime on macOS: brew install libomp\n"
+        "XGBoost models will be skipped."
+    )
+
 from .pipeline import MLPipeline
 from .preprocessor import DataPreprocessor
-
-logger = logging.getLogger(__name__)
 
 
 class ModelTrainer:
@@ -83,7 +96,7 @@ class ModelTrainer:
         
         mlflow.set_experiment(experiment_name)
     
-    def create_model(self, model_type: str, **kwargs) -> Union[Ridge, RandomForestRegressor, XGBRegressor]:
+    def create_model(self, model_type: str, **kwargs) -> Union[Ridge, RandomForestRegressor]:
         """
         Create a model instance from configuration.
         
@@ -93,6 +106,9 @@ class ModelTrainer:
         
         Returns:
             Model instance
+        
+        Raises:
+            ValueError: If model_type is unknown or XGBoost is requested but unavailable
         """
         model_config = self.config.get_section("models")
         
@@ -107,6 +123,12 @@ class ModelTrainer:
             return RandomForestRegressor(**params)
         
         elif model_type.lower() == "xgboost":
+            if not XGBOOST_AVAILABLE:
+                raise ValueError(
+                    "XGBoost is not available. Install OpenMP runtime:\n"
+                    "  macOS: brew install libomp\n"
+                    "  Or reinstall xgboost: pip install --upgrade xgboost"
+                )
             params = model_config.get("xgboost", {}).copy()
             params.update(kwargs)
             return XGBRegressor(**params)
@@ -195,7 +217,7 @@ class ModelTrainer:
                     mlflow.log_metric(f"val_{metric_name}", value)
             
             # Log model
-            if model_type.lower() == "xgboost":
+            if model_type.lower() == "xgboost" and XGBOOST_AVAILABLE:
                 mlflow.xgboost.log_model(pipeline.pipeline.named_steps['model'], "model")
             else:
                 mlflow.sklearn.log_model(pipeline.pipeline, "model")

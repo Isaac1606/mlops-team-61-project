@@ -171,6 +171,27 @@ However, results should be **within 1-2%** of the expected values.
 
 ## 🔍 Troubleshooting
 
+### Issue: XGBoost Library Not Found
+
+**Symptoms:**
+```
+XGBoostError: XGBoost Library (libxgboost.dylib) could not be loaded.
+Mac OSX users: Run `brew install libomp` to install OpenMP runtime.
+```
+
+**Solution (macOS):**
+```bash
+# Install OpenMP runtime
+brew install libomp
+
+# Reinstall XGBoost
+pip install --upgrade --force-reinstall xgboost
+```
+
+**Note:** The code will automatically skip XGBoost if it's not available and train other models.
+
+**See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more details.**
+
 ### Issue: "FileNotFoundError: Raw data file not found"
 
 **Solution:** Pull data from DVC remote:

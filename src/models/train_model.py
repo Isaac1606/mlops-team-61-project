@@ -99,8 +99,20 @@ def main():
     logger.info(f"Validation: {X_val.shape}")
     logger.info(f"Test: {X_test.shape}")
     
-    # Train models
-    models_to_train = ["ridge", "random_forest", "xgboost"]
+    # Train models (skip xgboost if not available)
+    models_to_train = ["ridge", "random_forest"]
+    
+    # Try to add xgboost if available
+    try:
+        from src.models.model_trainer import XGBOOST_AVAILABLE
+        if XGBOOST_AVAILABLE:
+            models_to_train.append("xgboost")
+        else:
+            logger.warning("XGBoost not available. Skipping XGBoost model training.")
+            logger.warning("To install: brew install libomp (macOS) or pip install --upgrade xgboost")
+    except ImportError:
+        logger.warning("Could not check XGBoost availability. Skipping XGBoost model training.")
+    
     trained_models = {}
     results_summary = []
     

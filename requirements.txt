@@ -41,6 +41,7 @@ jupyter
 joblib  # Para guardar scaler y modelos
 python-dateutil
 pytz
+pyyaml  # Para cargar configuración YAML
 
 # Optional: Advanced Features (descomentar si necesitas)
 # shap  # Para explicabilidad (SHAP values)

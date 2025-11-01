@@ -23,62 +23,117 @@ Machine Learning system for predicting hourly bike rental demand in the Capital 
 
 ## 🗂️ Project Structure
 
+This project follows **Cookiecutter Data Science** best practices with a modern MLOps architecture:
+
 ```
 mlops-team-61-project/
-├── config/                    # Configuration files
-│   └── paths_config.py        # Path management
-├── data/
+├── config/                     # Configuration files
+│   ├── config.yaml            # Central configuration (YAML)
+│   └── paths_config.py        # Legacy path config
+├── data/                       # Data directory (DVC tracked)
 │   ├── raw/                   # Original data (DVC tracked)
 │   │   └── bike_sharing_modified.csv
 │   ├── interim/               # Intermediate processed data
-│   │   └── bike_sharing_clean.csv (generated)
+│   │   └── bike_sharing_clean.csv
 │   └── processed/             # Final processed data for modeling
-├── docs/                      # Documentation
+│       ├── bike_sharing_features_train.csv
+│       ├── bike_sharing_features_val.csv
+│       └── bike_sharing_features_test.csv
+├── docs/                       # Documentation
+│   ├── ARCHITECTURE.md        # Project architecture (NEW)
 │   ├── ML_Canvas.md           # ML Canvas (business requirements)
 │   └── EDA_Summary.md         # EDA insights and findings
-├── models/                    # Trained models
-├── notebooks/                 # Jupyter notebooks
-│   └── notebook.ipynb         # Main EDA notebook
-├── reports/                   # Generated analysis
+├── models/                     # Trained models (DVC tracked)
+│   ├── *.pkl                  # Saved models
+│   └── *_feature_importance.csv
+├── notebooks/                  # Jupyter notebooks (exploratory)
+│   ├── notebook.ipynb         # Main EDA notebook
+│   └── 02_modeling.ipynb      # Modeling notebook
+├── reports/                    # Generated analysis
 │   └── figures/               # Visualizations
-├── src/                       # Source code
-│   ├── data/                  # Data processing scripts
-│   ├── models/                # Model training scripts
-│   ├── tools/                 # Utility functions
-│   └── visualization/         # Visualization scripts
-├── .dvc/                      # DVC configuration
-├── requirements.txt           # Python dependencies
-└── setup.py                   # Package setup
+├── src/                        # Source code (Python package)
+│   ├── config/                # Configuration management
+│   │   ├── config_loader.py   # YAML config loader
+│   │   └── paths.py          # Path management
+│   ├── data/                  # Data processing module
+│   │   ├── data_loader.py     # Data loading utilities
+│   │   ├── data_cleaner.py    # Data cleaning operations
+│   │   ├── feature_engineering.py # Feature engineering
+│   │   ├── data_splitter.py  # Temporal data splitting
+│   │   └── make_dataset.py   # Data processing pipeline script
+│   ├── models/                # Modeling module
+│   │   ├── preprocessor.py   # Scikit-Learn preprocessor
+│   │   ├── pipeline.py       # Scikit-Learn pipeline wrapper
+│   │   ├── model_trainer.py   # Model training with MLflow
+│   │   ├── model_evaluator.py # Model evaluation utilities
+│   │   └── train_model.py    # Training pipeline script
+│   └── tools/                 # Utility functions
+├── .dvc/                       # DVC configuration
+├── mlruns/                     # MLflow tracking data (gitignored)
+├── config.yaml                 # Main configuration file (NEW)
+├── requirements.txt            # Python dependencies
+├── environment.yml             # Conda environment file (NEW)
+├── setup.py                    # Package setup
+├── Makefile                    # Make commands for reproducibility (NEW)
+└── REPRODUCIBILITY.md          # Reproducibility guide (NEW)
 ```
+
+**Key Improvements:**
+- ✅ **Cookiecutter Structure**: Standardized project layout
+- ✅ **OOP Design**: Object-oriented classes for modularity
+- ✅ **Scikit-Learn Pipelines**: Production-ready ML workflows
+- ✅ **Configuration Management**: Centralized YAML config
+- ✅ **Reproducibility**: Makefile, environment files, documentation
 
 ---
 
 ## ⚙️ Setup Instructions
 
-### 1. Clone the Repository
+### Quick Start (Recommended)
+
 ```bash
+# 1. Clone repository
 git clone https://github.com/Isaac1606/mlops-team-61-project.git
 cd mlops-team-61-project
+
+# 2. Create conda environment (recommended for reproducibility)
+conda env create -f environment.yml
+conda activate mlops-team-61
+
+# 3. Install package
+pip install -e .
+
+# 4. Pull data from DVC
+make dvc-pull
+
+# 5. Run complete pipeline
+make all
 ```
 
-### 2. Create Virtual Environment (Python 3.12 recommended)
-```bash
-# Using conda (recommended)
-conda create -n mlops-project python=3.12 -y
-conda activate mlops-project
+### Alternative Setup (pip + venv)
 
-# Or using venv
+```bash
+# 1. Clone repository
+git clone https://github.com/Isaac1606/mlops-team-61-project.git
+cd mlops-team-61-project
+
+# 2. Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\activate   # Windows
+# .\venv\Scripts\activate   # Windows
+
+# 3. Install dependencies
+make install
+
+# 4. Pull data from DVC
+make dvc-pull
+
+# 5. Run complete pipeline
+make all
 ```
 
-### 3. Install Dependencies
-```bash
-pip install -e .
-```
+### Configure AWS Credentials (for DVC)
 
-### 4. Configure AWS Credentials (for DVC)
 ```bash
 aws configure --profile MLOpsTeamMemberUser
 # Enter:
@@ -86,12 +141,6 @@ aws configure --profile MLOpsTeamMemberUser
 # - AWS Secret Access Key
 # - Region: us-east-1
 # - Output format: json
-```
-
-### 5. Pull Data with DVC
-```bash
-dvc remote modify raw profile MLOpsTeamMemberUser
-dvc pull -r raw
 ```
 
 ---
@@ -171,12 +220,10 @@ dvc pull -r raw
   - Feature importance analysis
   - Prediction vs actual visualizations
 
-- [ ] **Production Scripts**
-  - `src/data/make_dataset.py`
-  - `src/data/preprocess.py`
-  - `src/models/train_model.py`
-  - `src/models/predict_model.py`
-  - `src/models/evaluate_model.py`
+- [x] **Production Scripts**
+  - [x] `src/data/make_dataset.py` - Complete data processing pipeline
+  - [x] `src/models/train_model.py` - Complete training pipeline with MLflow
+  - [ ] `src/models/predict_model.py` - Inference script (planned)
 
 - [ ] **Documentation & Presentation**
   - Executive presentation (PDF)
@@ -270,22 +317,47 @@ This project is part of the MLOps course at Tec de Monterrey.
 
 ```bash
 # 1. Setup environment
-conda create -n mlops-project python=3.12 -y
-conda activate mlops-project
+conda env create -f environment.yml
+conda activate mlops-team-61
 
-# 2. Install
-cd mlops-team-61-project
+# 2. Install package
 pip install -e .
 
 # 3. Configure AWS & DVC
 aws configure --profile MLOpsTeamMemberUser
 dvc remote modify raw profile MLOpsTeamMemberUser
 
-# 4. Get data
-dvc pull -r raw
+# 4. Pull data
+make dvc-pull
 
-# 5. Explore
-jupyter notebook notebooks/notebook.ipynb
+# 5. Run complete pipeline
+make all
+
+# 6. View results in MLflow
+make mlflow-ui
+# Open http://localhost:5000
+```
+
+## 📖 Additional Documentation
+
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Detailed architecture documentation
+- **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** - Reproducibility guide
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Troubleshooting common issues
+- **[docs/ML_Canvas.md](docs/ML_Canvas.md)** - Business requirements
+- **[docs/EDA_Summary.md](docs/EDA_Summary.md)** - EDA findings
+
+## 🔄 Available Commands (Makefile)
+
+```bash
+make help          # Show all available commands
+make install       # Install dependencies
+make data          # Run data processing pipeline
+make train         # Train models
+make all           # Run complete pipeline (data + train)
+make mlflow-ui     # Start MLflow UI
+make dvc-pull      # Pull data from DVC
+make dvc-push      # Push data to DVC
+make clean         # Clean generated files
 ```
 
 ---

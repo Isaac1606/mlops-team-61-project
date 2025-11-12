@@ -134,3 +134,6 @@ bin/
 # Pipfiles
 Pipfile
 Pipfile.lock
+
+# Vscode
+.vscode/

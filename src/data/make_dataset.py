@@ -95,6 +95,11 @@ def main():
     logger.info("\n" + "="*70)
     logger.info("STEP 6: SAVING PROCESSED DATASETS")
     logger.info("="*70)
+
+    # Ensure dteday remains present in processed splits
+    for df_split in (train_df, val_df, test_df):
+        if 'dteday' not in df_split.columns and 'dteday' in df_clean.columns:
+            df_split['dteday'] = df_clean['dteday'].iloc[:len(df_split)].values
     
     # Save feature-engineered datasets
     train_path = paths.processed_file("train", normalized=False)

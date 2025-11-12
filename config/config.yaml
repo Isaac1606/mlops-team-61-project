@@ -35,8 +35,13 @@ data:
 
 # Feature engineering configuration
 features:
+  base_year: 2011
   # Lag features (hours)
   lag_features: [1, 24, 48, 72, 168]
+
+  # Columns that must remain in feature matrices to preserve temporal context
+  context_columns:
+    - "dteday"
   
   # Rolling window features (hours)
   rolling_windows: [3, 24, 72]

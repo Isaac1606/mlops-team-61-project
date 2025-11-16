@@ -294,6 +294,8 @@ aws configure --profile MLOpsTeamMemberUser
 
 - [`docs/ML_Canvas.md`](docs/ML_Canvas.md) - Business requirements and ML design
 - [`docs/EDA_Summary.md`](docs/EDA_Summary.md) - Exploratory analysis findings
+- [`docs/DATA_DRIFT.md`](docs/DATA_DRIFT.md) - Data drift detection and performance monitoring guide ⭐ **NEW**
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Project architecture and design decisions
 - [`notebooks/notebook.ipynb`](notebooks/notebook.ipynb) - Interactive EDA notebook
 
 ---
@@ -358,7 +360,39 @@ make mlflow-ui     # Start MLflow UI
 make dvc-pull      # Pull data from DVC
 make dvc-push      # Push data to DVC
 make clean         # Clean generated files
+
+# Testing
+make test          # Run all tests
+make test-unit     # Run unit tests only
+make test-integration  # Run integration tests
+make test-drift    # Run data drift tests ⭐
+make test-coverage # Run tests with coverage report
+make test-fast     # Run fast tests (unit only, stop on first failure)
 ```
+
+## 🧪 Testing
+
+El proyecto incluye una suite completa de tests:
+
+- **Unit Tests**: Tests para componentes individuales (34 tests)
+- **Integration Tests**: Tests end-to-end del pipeline completo
+- **Data Drift Tests**: Tests para detección de drift y monitoreo de performance (16 tests)
+
+### Ejecutar Tests de Data Drift
+
+```bash
+# Todos los tests de drift
+make test-drift
+
+# Tests específicos
+pytest tests/data_drift/test_data_drift.py::TestDataDriftDetector::test_mean_shift_drift -v
+pytest tests/data_drift/ -v
+
+# Ver documentación completa
+cat docs/DATA_DRIFT.md
+```
+
+Para más información sobre data drift, consulta la [documentación completa](docs/DATA_DRIFT.md).
 
 ---
 

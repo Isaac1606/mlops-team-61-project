@@ -6,7 +6,6 @@ Handles scaling and feature selection.
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
-from sklearn.impute import SimpleImputer
 from sklearn.base import BaseEstimator, TransformerMixin
 from typing import List, Optional
 import joblib
@@ -21,7 +20,6 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     
     This class implements the Scikit-Learn transformer interface, making
     it compatible with Pipeline. It handles:
-    - Missing value imputation (NaN handling)
     - Feature scaling (StandardScaler, RobustScaler, MinMaxScaler)
     - Feature exclusion (binary/one-hot encoded features)
     
@@ -31,8 +29,7 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def __init__(
         self,
         scaler_type: str = "robust",
-        exclude_from_scaling: Optional[List[str]] = None,
-        impute_strategy: str = "median"
+        exclude_from_scaling: Optional[List[str]] = None
     ):
         """
         Initialize preprocessor.
@@ -40,14 +37,9 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         Args:
             scaler_type: Type of scaler ("standard", "robust", "minmax", or "none")
             exclude_from_scaling: List of column name prefixes to exclude from scaling
-            impute_strategy: Strategy for imputing missing values ("mean", "median", "most_frequent", or "constant")
         """
         self.scaler_type = scaler_type
         self.exclude_from_scaling = exclude_from_scaling or []
-        self.impute_strategy = impute_strategy
-        
-        # Initialize imputer for NaN handling
-        self.imputer = SimpleImputer(strategy=impute_strategy, fill_value=0)
         
         # Initialize scaler
         if scaler_type == "standard":
@@ -64,7 +56,6 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         self.feature_cols_ = None
         self.scale_cols_ = None
         self.non_scale_cols_ = None
-        self.feature_names_ = None  # Store original column order from fit
         self.is_fitted_ = False
     
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
@@ -82,12 +73,10 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         
         X = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
         
-        # Check for NaN values
-        nan_count = X.isnull().sum().sum()
-        if nan_count > 0:
-            logger.warning(f"Found {nan_count} NaN values in training data. Will impute using {self.impute_strategy}.")
+        # Clean infinite values and NaNs before fitting
+        X = self._clean_infinite_values(X)
         
-        # Identify columns to scale (preserve original order)
+        # Identify columns to scale
         self.scale_cols_ = [
             col for col in X.columns
             if not any(exclude in col for exclude in self.exclude_from_scaling)
@@ -98,26 +87,12 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
             if any(exclude in col for exclude in self.exclude_from_scaling)
         ]
         
-        # Store original column order (critical for inference)
-        # This preserves the exact order columns appeared during fit
-        self.feature_names_ = list(X.columns)
-        
         logger.debug(f"Scaling {len(self.scale_cols_)} columns, excluding {len(self.non_scale_cols_)}")
         
-        # Fit imputer on all columns (including both scaled and non-scaled)
-        self.imputer.fit(X)
-        
-        # Fit scaler if applicable (only on columns to scale)
+        # Fit scaler if applicable
         if self.scaler is not None and len(self.scale_cols_) > 0:
-            # First impute, then fit scaler
-            X_imputed = pd.DataFrame(
-                self.imputer.transform(X),
-                columns=X.columns,
-                index=X.index
-            )
-            self.scaler.fit(X_imputed[self.scale_cols_])
+            self.scaler.fit(X[self.scale_cols_])
         
-        # feature_names_ already set above during column identification
         self.is_fitted_ = True
         
         return self
@@ -137,31 +112,27 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         
         X = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
         
-        # Step 1: Impute missing values
-        X_imputed = pd.DataFrame(
-            self.imputer.transform(X),
-            columns=X.columns,
-            index=X.index
-        )
+        # Clean infinite values and NaNs before transforming
+        X = self._clean_infinite_values(X)
         
-        # Step 2: Transform scaled columns
+        # Transform scaled columns
         if self.scaler is not None and len(self.scale_cols_) > 0:
             X_scaled = pd.DataFrame(
-                self.scaler.transform(X_imputed[self.scale_cols_]),
+                self.scaler.transform(X[self.scale_cols_]),
                 columns=self.scale_cols_,
-                index=X_imputed.index
+                index=X.index
             )
             
             # Combine scaled and non-scaled columns
             if len(self.non_scale_cols_) > 0:
                 X_result = pd.concat([
                     X_scaled,
-                    X_imputed[self.non_scale_cols_]
+                    X[self.non_scale_cols_]
                 ], axis=1)
             else:
                 X_result = X_scaled
         else:
-            X_result = X_imputed
+            X_result = X
         
         # Ensure column order matches fit
         if self.scale_cols_ and self.non_scale_cols_:
@@ -183,4 +154,42 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def load(cls, file_path: str) -> 'DataPreprocessor':
         """Load preprocessor from disk."""
         return joblib.load(file_path)
+    
+    def _clean_infinite_values(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean infinite values and NaNs from DataFrame.
+        
+        Replaces inf/-inf with NaN, then fills NaN with column median.
+        
+        Args:
+            X: DataFrame to clean
+        
+        Returns:
+            Cleaned DataFrame
+        """
+        X_clean = X.copy()
+        
+        # Check for infinite values
+        inf_mask = np.isinf(X_clean.select_dtypes(include=[np.number]))
+        if inf_mask.any().any():
+            n_inf = inf_mask.sum().sum()
+            logger.warning(f"Found {n_inf} infinite values. Replacing with NaN and filling with median.")
+            
+            # Replace inf/-inf with NaN
+            X_clean = X_clean.replace([np.inf, -np.inf], np.nan)
+            
+            # Fill NaN with column median (for numeric columns only)
+            numeric_cols = X_clean.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                if X_clean[col].isna().any():
+                    median_val = X_clean[col].median()
+                    if pd.isna(median_val):
+                        # If median is also NaN, use 0 as fallback
+                        median_val = 0.0
+                    X_clean[col] = X_clean[col].fillna(median_val)
+            
+            # If still NaN after fill, replace with 0
+            X_clean = X_clean.fillna(0)
+        
+        return X_clean
 

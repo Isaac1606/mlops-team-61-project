@@ -195,7 +195,11 @@ class ModelTrainer:
             
             # Train pipeline
             logger.info(f"Training {model_type} model...")
-            pipeline.fit(X_train, y_train)
+            if model_type.lower() == "xgboost" and X_val is not None and y_val is not None:
+                # XGBoost needs validation set for early stopping
+                pipeline.fit(X_train, y_train, X_val=X_val, y_val=y_val)
+            else:
+                pipeline.fit(X_train, y_train)
             
             # Get predictions for logging
             y_train_pred = pipeline.predict(X_train)

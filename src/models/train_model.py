@@ -52,6 +52,12 @@ def prepare_features_and_target(df: pd.DataFrame, config) -> tuple:
     
     # Feature columns (all except excluded)
     feature_cols = [col for col in df.columns if col not in exclude_cols]
+
+    # Ensure context columns required by downstream transformers are retained
+    context_cols = config.get("features.context_columns", ["dteday"])
+    for col in context_cols:
+        if col in df.columns and col not in feature_cols:
+            feature_cols.append(col)
     
     # Target column
     target_col = config.get("data.target_col", "cnt")
@@ -195,9 +201,18 @@ def main():
         
         # Identify best model
         best_model = summary_df.loc[summary_df['val_rmse'].idxmin()]
-        logger.info(f"\n🏆 Best model (lowest validation RMSE): {best_model['model']}")
+        best_model_name = best_model['model']
+        best_model_file_name = f"{best_model_name}_baseline"
+        
+        logger.info(f"\n🏆 Best model (lowest validation RMSE): {best_model_name}")
         logger.info(f"   Validation RMSE: {best_model['val_rmse']:.2f}")
         logger.info(f"   Test RMSE: {best_model['test_rmse']:.2f}")
+        
+        # Save best model name to file for service to pick up
+        best_model_path = paths.models_dir / ".best_model"
+        best_model_path.write_text(best_model_file_name)
+        logger.info(f"✅ Best model name saved to: {best_model_path}")
+        logger.info(f"   Service will automatically use: {best_model_file_name}")
     
     logger.info("\n✅ Model training pipeline completed successfully!")
     logger.info("View MLflow UI: mlflow ui")

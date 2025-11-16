@@ -1,6 +1,6 @@
-# ============================================================================
+# =========================================================================
 # REQUIREMENTS - MLOps Bike Sharing Demand Prediction
-# ============================================================================
+# =========================================================================
 # Actualizado: 2025-10-12
 # Compatible con Python 3.9+
 
@@ -43,6 +43,7 @@ joblib  # Para guardar scaler y modelos
 python-dateutil
 pytz
 pyyaml  # Para cargar configuración YAML
+redis  # Cliente Redis para historial stateful
 
 # Testing
 pytest  # Testing framework

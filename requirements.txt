@@ -15,6 +15,7 @@ xgboost
 
 # Statistical Analysis (NUEVAS - para pruebas estadísticas formales)
 statsmodels  # ACF, PACF, ADF, KPSS, Ljung-Box
+scipy  # Statistical tests for data drift
 
 # Visualization
 matplotlib
@@ -42,6 +43,11 @@ joblib  # Para guardar scaler y modelos
 python-dateutil
 pytz
 pyyaml  # Para cargar configuración YAML
+
+# Testing
+pytest  # Testing framework
+pytest-cov  # Coverage reporting
+pytest-xdist  # Parallel test execution
 
 # Optional: Advanced Features (descomentar si necesitas)
 # shap  # Para explicabilidad (SHAP values)

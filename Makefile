@@ -78,10 +78,30 @@ dvc-push:
 	@echo "Pushing data to DVC remote..."
 	dvc push -r raw
 
-# Testing (placeholder)
+# Testing
 test:
 	@echo "Running tests..."
-	@echo "Tests not yet implemented. Add tests in tests/ directory."
+	pytest tests/ -v
+
+test-unit:
+	@echo "Running unit tests..."
+	pytest tests/unit/ -v
+
+test-integration:
+	@echo "Running integration tests..."
+	pytest tests/integration/ -v
+
+test-drift:
+	@echo "Running data drift tests..."
+	pytest tests/data_drift/ -v
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
+
+test-fast:
+	@echo "Running fast tests (unit only)..."
+	pytest tests/unit/ -v -x
 
 # Linting
 lint:

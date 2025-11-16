@@ -83,6 +83,9 @@ class FeatureEngineer:
         # Step 7: Create temporal indicators
         df_features = self._create_temporal_indicators(df_features)
         
+        # Step 8: Clean infinite values that may have been created
+        df_features = self._clean_infinite_values(df_features)
+        
         logger.info(f"Feature engineering complete. Final shape: {df_features.shape}")
         
         return df_features
@@ -292,4 +295,43 @@ class FeatureEngineer:
         logger.debug("Historical context features created")
         
         return df_features
+    
+    def _clean_infinite_values(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean infinite values that may have been created during feature engineering.
+        
+        Replaces inf/-inf with NaN, then fills with column median or 0.
+        
+        Args:
+            df: DataFrame to clean
+        
+        Returns:
+            Cleaned DataFrame
+        """
+        df_clean = df.copy()
+        
+        # Check for infinite values in numeric columns
+        numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
+        inf_mask = np.isinf(df_clean[numeric_cols])
+        
+        if inf_mask.any().any():
+            n_inf = inf_mask.sum().sum()
+            logger.warning(f"Found {n_inf} infinite values after feature engineering. Cleaning...")
+            
+            # Replace inf/-inf with NaN
+            df_clean[numeric_cols] = df_clean[numeric_cols].replace([np.inf, -np.inf], np.nan)
+            
+            # Fill NaN with column median (for numeric columns only)
+            for col in numeric_cols:
+                if df_clean[col].isna().any():
+                    median_val = df_clean[col].median()
+                    if pd.isna(median_val):
+                        # If median is also NaN (all values were inf), use 0 as fallback
+                        median_val = 0.0
+                    df_clean[col] = df_clean[col].fillna(median_val)
+            
+            # If still NaN after fill, replace with 0
+            df_clean = df_clean.fillna(0)
+        
+        return df_clean
 

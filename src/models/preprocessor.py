@@ -73,6 +73,9 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         
         X = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
         
+        # Clean infinite values and NaNs before fitting
+        X = self._clean_infinite_values(X)
+        
         # Identify columns to scale
         self.scale_cols_ = [
             col for col in X.columns
@@ -108,6 +111,9 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
             raise ValueError("Preprocessor must be fitted before transform")
         
         X = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+        
+        # Clean infinite values and NaNs before transforming
+        X = self._clean_infinite_values(X)
         
         # Transform scaled columns
         if self.scaler is not None and len(self.scale_cols_) > 0:
@@ -148,4 +154,42 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def load(cls, file_path: str) -> 'DataPreprocessor':
         """Load preprocessor from disk."""
         return joblib.load(file_path)
+    
+    def _clean_infinite_values(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean infinite values and NaNs from DataFrame.
+        
+        Replaces inf/-inf with NaN, then fills NaN with column median.
+        
+        Args:
+            X: DataFrame to clean
+        
+        Returns:
+            Cleaned DataFrame
+        """
+        X_clean = X.copy()
+        
+        # Check for infinite values
+        inf_mask = np.isinf(X_clean.select_dtypes(include=[np.number]))
+        if inf_mask.any().any():
+            n_inf = inf_mask.sum().sum()
+            logger.warning(f"Found {n_inf} infinite values. Replacing with NaN and filling with median.")
+            
+            # Replace inf/-inf with NaN
+            X_clean = X_clean.replace([np.inf, -np.inf], np.nan)
+            
+            # Fill NaN with column median (for numeric columns only)
+            numeric_cols = X_clean.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                if X_clean[col].isna().any():
+                    median_val = X_clean[col].median()
+                    if pd.isna(median_val):
+                        # If median is also NaN, use 0 as fallback
+                        median_val = 0.0
+                    X_clean[col] = X_clean[col].fillna(median_val)
+            
+            # If still NaN after fill, replace with 0
+            X_clean = X_clean.fillna(0)
+        
+        return X_clean
 

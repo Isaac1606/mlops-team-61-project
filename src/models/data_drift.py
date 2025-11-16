@@ -193,28 +193,45 @@ class DataDriftDetector:
             
             # Chi-square test
             try:
-                # Create contingency table
+                # Create contingency table with absolute counts
                 ref_freq = [ref_counts.get(cat, 0) * len(self.reference_data) for cat in all_categories]
                 curr_freq = [curr_counts.get(cat, 0) * len(current_data) for cat in all_categories]
                 
-                chi2, chi2_pvalue = stats.chisquare(curr_freq, f_exp=ref_freq)
-                results['summary']['tests_performed'] += 1
+                # Normalize expected frequencies to sum to observed frequencies total
+                # This ensures chi-square test validity
+                total_observed = sum(curr_freq)
+                total_expected = sum(ref_freq)
                 
-                has_drift = chi2_pvalue < self.threshold
+                if total_expected > 0:
+                    # Scale expected frequencies proportionally
+                    ref_freq_normalized = [f * (total_observed / total_expected) for f in ref_freq]
+                else:
+                    # If no reference frequencies, skip this feature
+                    continue
                 
-                if has_drift:
-                    results['summary']['drifted_features'] += 1
-                    results['has_drift'] = True
+                # Only perform test if we have sufficient data
+                # Ensure no zero expected frequencies (add small epsilon to avoid division by zero)
+                ref_freq_normalized = [max(f, 1e-10) if f > 0 else 1e-10 for f in ref_freq_normalized]
                 
-                if return_details:
-                    results['feature_drifts'][col] = {
-                        'type': 'categorical',
-                        'has_drift': has_drift,
-                        'chi2_statistic': float(chi2),
-                        'chi2_pvalue': float(chi2_pvalue),
-                        'ref_distribution': ref_counts.to_dict(),
-                        'curr_distribution': curr_counts.to_dict()
-                    }
+                if total_observed > 0 and any(f > 1e-10 for f in ref_freq_normalized):
+                    chi2, chi2_pvalue = stats.chisquare(curr_freq, f_exp=ref_freq_normalized)
+                    results['summary']['tests_performed'] += 1
+                    
+                    has_drift = chi2_pvalue < self.threshold
+                    
+                    if has_drift:
+                        results['summary']['drifted_features'] += 1
+                        results['has_drift'] = True
+                    
+                    if return_details:
+                        results['feature_drifts'][col] = {
+                            'type': 'categorical',
+                            'has_drift': has_drift,
+                            'chi2_statistic': float(chi2),
+                            'chi2_pvalue': float(chi2_pvalue),
+                            'ref_distribution': ref_counts.to_dict(),
+                            'curr_distribution': curr_counts.to_dict()
+                        }
             
             except Exception as e:
                 logger.warning(f"Error detecting drift for {col}: {e}")
@@ -304,9 +321,16 @@ class DataDriftDetector:
             
             ref_stats = self.reference_stats[col]
             
+            # Ensure std is not zero or too small to avoid division issues
+            ref_std = ref_stats.get('std', 0.0)
+            if ref_std == 0 or np.isnan(ref_std) or np.isinf(ref_std):
+                # Use a small non-zero value or fall back to mean/10
+                ref_mean = ref_stats.get('mean', 0.0)
+                ref_std = abs(ref_mean) * 0.1 if ref_mean != 0 else 1.0
+            
             if drift_type == "mean_shift":
                 # Shift mean
-                mean_shift = drift_magnitude * ref_stats['std']
+                mean_shift = drift_magnitude * ref_std
                 synthetic_data[col] = synthetic_data[col] + mean_shift
             
             elif drift_type == "variance_shift":
@@ -318,13 +342,58 @@ class DataDriftDetector:
             
             elif drift_type == "distribution_shift":
                 # Shift entire distribution (more aggressive)
-                mean_shift = drift_magnitude * ref_stats['std']
+                mean_shift = drift_magnitude * ref_std
                 synthetic_data[col] = synthetic_data[col] + mean_shift
                 # Also add noise
-                synthetic_data[col] = synthetic_data[col] + \
-                    np.random.normal(0, drift_magnitude * ref_stats['std'] * 0.5, len(synthetic_data))
+                noise_std = drift_magnitude * ref_std * 0.5
+                if noise_std > 0 and not np.isnan(noise_std) and not np.isinf(noise_std):
+                    synthetic_data[col] = synthetic_data[col] + \
+                        np.random.normal(0, noise_std, len(synthetic_data))
+        
+        # Clean infinite values that may have been created
+        synthetic_data = self._clean_infinite_values(synthetic_data)
         
         return synthetic_data
+    
+    def _clean_infinite_values(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean infinite values from DataFrame.
+        
+        Replaces inf/-inf with NaN, then fills with column median or 0.
+        
+        Args:
+            data: DataFrame to clean
+        
+        Returns:
+            Cleaned DataFrame
+        """
+        data_clean = data.copy()
+        
+        # Check for infinite values in numeric columns
+        numeric_cols = data_clean.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 0:
+            inf_mask = np.isinf(data_clean[numeric_cols])
+            
+            if inf_mask.any().any():
+                n_inf = inf_mask.sum().sum()
+                logger.warning(f"Found {n_inf} infinite values in synthetic data. Cleaning...")
+                
+                # Replace inf/-inf with NaN
+                data_clean[numeric_cols] = data_clean[numeric_cols].replace([np.inf, -np.inf], np.nan)
+                
+                # Fill NaN with column median (for numeric columns only)
+                for col in numeric_cols:
+                    if data_clean[col].isna().any():
+                        median_val = data_clean[col].median()
+                        if pd.isna(median_val):
+                            # If median is also NaN (all values were inf), use 0 as fallback
+                            median_val = 0.0
+                        data_clean[col] = data_clean[col].fillna(median_val)
+                
+                # If still NaN after fill, replace with 0
+                data_clean = data_clean.fillna(0)
+        
+        return data_clean
 
 
 class PerformanceMonitor:

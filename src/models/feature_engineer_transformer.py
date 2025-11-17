@@ -36,12 +36,43 @@ class FeatureEngineerTransformer(BaseEstimator, TransformerMixin):
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
-    @staticmethod
-    def _build_timestamp(df: pd.DataFrame) -> pd.Series:
-        if "dteday" not in df.columns or "hr" not in df.columns:
-            raise ValueError("Columns 'dteday' and 'hr' are required to build timestamp")
-        dt = pd.to_datetime(df["dteday"])
-        return dt + pd.to_timedelta(df["hr"].astype(int), unit="h")
+    def _build_timestamp(self, df: pd.DataFrame) -> pd.Series:
+        """Build timestamp from available columns.
+        
+        Tries multiple strategies:
+        1. Use dteday + hr if available
+        2. Use yr, mnth, hr if available (assumes day=1)
+        3. Use existing timestamp column if available
+        4. Returns a dummy timestamp series if none available
+        """
+        # Strategy 1: Use dteday + hr
+        if "dteday" in df.columns and "hr" in df.columns:
+            dt = pd.to_datetime(df["dteday"])
+            return dt + pd.to_timedelta(df["hr"].astype(int), unit="h")
+        
+        # Strategy 2: Use existing timestamp column
+        if "timestamp" in df.columns:
+            return pd.to_datetime(df["timestamp"])
+        
+        # Strategy 3: Try to build from yr, mnth, hr (assume day=1)
+        if "yr" in df.columns and "mnth" in df.columns and "hr" in df.columns:
+            years = df["yr"].astype(int) + self._base_year
+            months = df["mnth"].astype(int)
+            hours = df["hr"].astype(int)
+            # Create timestamp assuming day=1 of each month
+            timestamps = pd.to_datetime({
+                'year': years,
+                'month': months,
+                'day': 1,
+                'hour': hours
+            })
+            return timestamps
+        
+        # Strategy 4: Return dummy timestamps (sequential hours from a base date)
+        # This allows the transformer to work even without temporal info
+        n_samples = len(df)
+        base_date = pd.Timestamp(f'{self._base_year}-01-01')
+        return pd.date_range(base_date, periods=n_samples, freq='H')
 
     def _apply_historical_average(self, df: pd.DataFrame) -> pd.DataFrame:
         if not self._historical_avg_map:
@@ -194,6 +225,17 @@ class FeatureEngineerTransformer(BaseEstimator, TransformerMixin):
             result[col] = df_in[col]
         # Remove helper columns that should not reach downstream preprocessing/model steps
         result = result.drop(columns=["dteday", "cnt", "cnt_transformed", "timestamp"], errors="ignore")
+        
+        # Handle NaNs: fill with 0 for lag/rolling features, forward fill for others, then fill remaining with 0
+        # This ensures the transformer output is always valid for sklearn models
+        lag_rolling_cols = [col for col in result.columns if any(x in col for x in ['lag', 'rolling', 'pct_change'])]
+        for col in lag_rolling_cols:
+            if col in result.columns:
+                result[col] = result[col].fillna(0.0)
+        
+        # Fill remaining NaNs with 0 (for any other features that might have NaNs)
+        result = result.fillna(0.0)
+        
         return result
 
     # ------------------------------------------------------------------

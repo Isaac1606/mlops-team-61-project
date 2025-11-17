@@ -50,9 +50,11 @@ pytest  # Testing framework
 pytest-cov  # Coverage reporting
 pytest-xdist  # Parallel test execution
 
+# API & Web Server (Required for production service)
+fastapi  # Para API de producción
+uvicorn  # Server ASGI para FastAPI
+
 # Optional: Advanced Features (descomentar si necesitas)
 # shap  # Para explicabilidad (SHAP values)
 # optuna  # Para hyperparameter tuning bayesiano
 # evidently  # Para monitoreo de drift
-# fastapi  # Para API de producción
-# uvicorn  # Server ASGI para FastAPI

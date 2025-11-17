@@ -276,7 +276,7 @@ aws configure --profile MLOpsTeamMemberUser
 - **Data Versioning:** DVC
 - **Cloud Storage:** AWS S3
 - **Orchestration:** Apache Airflow (planned)
-- **Containerization:** Docker (planned)
+- **Containerization:** Docker ✅
 
 ---
 
@@ -340,8 +340,74 @@ make mlflow-ui
 # Open http://localhost:5000
 ```
 
+## 🐳 Docker Deployment
+
+The ML service can be containerized and deployed using Docker. This provides a reproducible, isolated environment for production deployments.
+
+### Quick Start with Docker
+
+```bash
+# Build the Docker image
+docker build -t ml-service:latest .
+
+# Run the container
+docker run -p 8000:8000 ml-service:latest
+```
+
+The service will be available at: `http://localhost:8000`
+
+### Using Docker Compose (Recommended)
+
+```bash
+# Start ML service + Redis
+docker-compose up --build
+
+# Run in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f ml-service
+
+# Stop services
+docker-compose down
+```
+
+### Publishing to Docker Hub
+
+```bash
+# 1. Login to Docker Hub
+docker login
+
+# 2. Tag the image
+docker tag ml-service:latest YOUR_USERNAME/ml-service:latest
+docker tag ml-service:latest YOUR_USERNAME/ml-service:v1.0.0
+
+# 3. Push to Docker Hub
+docker push YOUR_USERNAME/ml-service:latest
+docker push YOUR_USERNAME/ml-service:v1.0.0
+```
+
+### Versioning Strategy
+
+We use semantic versioning for container tags:
+- `latest`: Most recent stable version
+- `v1.0.0`: Specific version (major.minor.patch)
+- `v1.0.0-beta`: Pre-release versions
+
+**Example:**
+```bash
+docker build -t ml-service:v1.0.0 -t ml-service:latest .
+docker tag ml-service:v1.0.0 YOUR_USERNAME/ml-service:v1.0.0
+docker tag ml-service:v1.0.0 YOUR_USERNAME/ml-service:latest
+docker push YOUR_USERNAME/ml-service:v1.0.0
+docker push YOUR_USERNAME/ml-service:latest
+```
+
+For detailed Docker documentation, see **[DOCKER.md](DOCKER.md)**.
+
 ## 📖 Additional Documentation
 
+- **[DOCKER.md](DOCKER.md)** - Complete Docker guide (build, run, publish) ⭐ **NEW**
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Detailed architecture documentation
 - **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** - Reproducibility guide
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Troubleshooting common issues
